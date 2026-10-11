@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Wallet</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #17202a;
+    --muted: #7b8794;
+    --primary: #0b5cff;
+    --primary-dark: #0646c7;
+    --green: #16a34a;
+    --red: #dc2626;
+    --border: #e7ebef;
+    --shadow: 0 8px 25px rgba(0,0,0,.06);
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+
+/* =====================================
+   HEADER
+===================================== */
+
+.header {
+    background: linear-gradient(135deg, #0757d8, #0b5cff);
+    color: white;
+    padding: 25px 20px 35px;
+    border-radius: 0 0 28px 28px;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.logo span {
+    opacity: .75;
+}
+
+.profile {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.18);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+}
+
+.balance-label {
+    font-size: 13px;
+    opacity: .8;
+    margin-bottom: 7px;
+}
+
+.total-balance {
+    font-size: 34px;
+    font-weight: 700;
+}
+
+.balance-sub {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: .75;
+}
+
+
+/* =====================================
+   MAIN
+===================================== */
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+
+
+/* =====================================
+   SECTION
+===================================== */
+
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 12px 0;
+}
+
+.section-title h2 {
+    font-size: 17px;
+}
+
+.section-title button {
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+
+/* =====================================
+   WALLET
+===================================== */
+
+.wallet-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.wallet-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.wallet-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.wallet-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #edf4ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 19px;
+}
+
+.wallet-name {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.wallet-amount {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.wallet-actions {
+    display: flex;
+    gap: 7px;
+}
+
+.wallet-actions button {
+    flex: 1;
+    border: none;
+    padding: 9px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.btn-add {
+    background: #e9f8ef;
+    color: var(--green);
+}
+
+.btn-minus {
+    background: #fff0f0;
+    color: var(--red);
+}
+
+
+/* =====================================
+   TRANSACTION HISTORY
+===================================== */
+
+.history {
+    margin-top: 28px;
+}
+
+.history-card {
+    background: white;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.transaction {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.transaction:last-child {
+    border-bottom: none;
+}
+
+.transaction-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.transaction-icon.income {
+    background: #eaf8ef;
+    color: var(--green);
+}
+
+.transaction-icon.expense {
+    background: #fff0f0;
+    color: var(--red);
+}
+
+.transaction-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.transaction-title {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.transaction-description {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.transaction-date {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.transaction-amount {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.transaction-amount.income {
+    color: var(--green);
+}
+
+.transaction-amount.expense {
+    color: var(--red);
+}
+
+.delete-transaction {
+    border: none;
+    background: transparent;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 5px;
+}
+
+.delete-transaction:hover {
+    color: var(--red);
+}
+
+
+/* =====================================
+   EMPTY
+===================================== */
+
+.empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 25px;
+    background: white;
+    border-radius: 15px;
+    border: 1px dashed #d8dde3;
+    font-size: 13px;
+}
+
+
+/* =====================================
+   WISHLIST
+===================================== */
+
+.wishlist {
+    margin-top: 28px;
+}
+
+.wishlist-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 17px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+}
+
+.wishlist-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.item-name {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.item-price {
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 5px;
+}
+
+.price-enough {
+    color: var(--green);
+}
+
+.price-not-enough {
+    color: var(--red);
+}
+
+.status {
+    font-size: 11px;
+    padding: 6px 9px;
+    border-radius: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status-enough {
+    background: #eaf8ef;
+    color: var(--green);
+}
+
+.status-not-enough {
+    background: #fff0f0;
+    color: var(--red);
+}
+
+.progress-bg {
+    height: 7px;
+    background: #edf0f3;
+    border-radius: 10px;
+    margin-top: 14px;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    border-radius: 10px;
+    background: var(--primary);
+}
+
+.progress.complete {
+    background: var(--green);
+}
+
+.item-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.item-actions {
+    display: flex;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.item-actions button {
+    border: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.delete-btn {
+    background: #fff0f0;
+    color: var(--red);
+}
+
+
+/* =====================================
+   MODAL
+===================================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-box {
+    width: 100%;
+    max-width: 420px;
+    background: white;
+    border-radius: 22px;
+    padding: 22px;
+}
+
+.modal-title {
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    margin-bottom: 14px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+}
+
+.input-group input:focus {
+    border-color: var(--primary);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.cancel-btn {
+    background: #eef1f4;
+    color: #555;
+}
+
+.save-btn {
+    background: var(--primary);
+    color: white;
+}
+
+
+/* =====================================
+   FLOATING BUTTON
+===================================== */
+
+.floating-btn {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-size: 28px;
+    box-shadow: 0 8px 20px rgba(11,92,255,.3);
+    cursor: pointer;
+}
+
+
+/* =====================================
+   RESPONSIVE
+===================================== */
+
+@media(max-width:600px) {
+
+    .wallet-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .total-balance {
+        font-size: 30px;
+    }
+
+    .container {
+        padding: 16px;
+    }
+
+    .transaction {
+        padding: 13px;
+    }
+
+    .transaction-amount {
+        font-size: 12px;
+    }
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<!-- =====================================
+     HEADER
+===================================== -->
+
+<header class="header">
+
+    <div class="header-top">
+
+        <div class="logo">
+            My<span>Wallet</span>
+        </div>
+
+        <div class="profile">
+            M
+        </div>
+
+    </div>
+
+
+    <div class="balance-label">
+        TOTAL SALDO
+    </div>
+
+    <div
+        class="total-balance"
+        id="totalBalance">
+        Rp0
+    </div>
+
+    <div class="balance-sub">
+        Cash + E-Wallet
+    </div>
+
+</header>
+
+
+
+<main class="container">
+
+
+<!-- =====================================
+     WALLET
+===================================== -->
+
+<div class="section-title">
+
+    <h2>Dompet Saya</h2>
+
+</div>
+
+
+<div class="wallet-grid">
+
+
+    <!-- CASH -->
+
+    <div class="wallet-card">
+
+        <div class="wallet-card-top">
+
+            <div class="wallet-icon">
+                💵
+            </div>
+
+            <div>
+
+                <div class="wallet-name">
+                    Cash
+                </div>
+
+                <div
+                    class="wallet-amount"
+                    id="cashBalance">
+                    Rp0
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="wallet-actions">
+
+            <button
+                class="btn-add"
+                onclick="changeBalance('cash','add')">
+                + Tambah
+            </button>
+
+            <button
+                class="btn-minus"
+                onclick="changeBalance('cash','minus')">
+                − Kurangi
+            </button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- E-WALLET -->
+
+    <div class="wallet-card">
+
+        <div class="wallet-card-top">
+
+            <div class="wallet-icon">
+                📱
+            </div>
+
+            <div>
+
+                <div class="wallet-name">
+                    E-Wallet
+                </div>
+
+                <div
+                    class="wallet-amount"
+                    id="ewalletBalance">
+                    Rp0
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="wallet-actions">
+
+            <button
+                class="btn-add"
+                onclick="changeBalance('ewallet','add')">
+                + Tambah
+            </button>
+
+            <button
+                class="btn-minus"
+                onclick="changeBalance('ewallet','minus')">
+                − Kurangi
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================
+     TRANSACTION HISTORY
+===================================== -->
+
+<div class="section-title history">
+
+    <h2>Riwayat Transaksi</h2>
+
+    <button onclick="clearHistory()">
+        Hapus Semua
+    </button>
+
+</div>
+
+
+<div
+    class="history-card"
+    id="historyContainer">
+</div>
+
+
+
+<!-- =====================================
+     WISHLIST
+===================================== -->
+
+<div class="section-title wishlist">
+
+    <h2>Wishlist / Target</h2>
+
+    <button onclick="openWishlistModal()">
+        + Tambah
+    </button>
+
+</div>
+
+
+<div id="wishlistContainer"></div>
+
+
+</main>
+
+
+
+<!-- =====================================
+     FLOATING BUTTON
+===================================== -->
+
+<button
+    class="floating-btn"
+    onclick="openWishlistModal()">
+    +
+</button>
+
+
+
+<!-- =====================================
+     MODAL SALDO
+===================================== -->
+
+<div
+    class="modal"
+    id="balanceModal">
+
+    <div class="modal-box">
+
+        <div
+            class="modal-title"
+            id="balanceModalTitle">
+            Tambah Saldo
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Nominal
+            </label>
+
+            <input
+                type="number"
+                id="balanceInput"
+                placeholder="Contoh: 50000">
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Keterangan
+            </label>
+
+            <input
+                type="text"
+                id="transactionDescription"
+                placeholder="Contoh: Uang saku">
+
+        </div>
+
+
+        <div class="modal-buttons">
+
+            <button
+                class="cancel-btn"
+                onclick="closeModal('balanceModal')">
+                Batal
+            </button>
+
+            <button
+                class="save-btn"
+                onclick="saveBalance()">
+                Simpan
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================
+     MODAL WISHLIST
+===================================== -->
+
+<div
+    class="modal"
+    id="wishlistModal">
+
+    <div class="modal-box">
+
+        <div class="modal-title">
+            Tambah Wishlist
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Nama Barang
+            </label>
+
+            <input
+                type="text"
+                id="itemName"
+                placeholder="Contoh: Headset">
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Harga
+            </label>
+
+            <input
+                type="number"
+                id="itemPrice"
+                placeholder="Contoh: 750000">
+
+        </div>
+
+
+        <div class="modal-buttons">
+
+            <button
+                class="cancel-btn"
+                onclick="closeModal('wishlistModal')">
+                Batal
+            </button>
+
+            <button
+                class="save-btn"
+                onclick="saveWishlist()">
+                Simpan
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<script>
+
+/* =====================================
+   FIREBASE CONFIGURATION
+===================================== */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA9gpQ7teK0_NmS6-h73rwCJ2RCOeXG_qo",
+  authDomain: "my-wallet-1bb73.firebaseapp.com",
+  databaseURL: "https://my-wallet-1bb73-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "my-wallet-1bb73",
+  storageBucket: "my-wallet-1bb73.firebasestorage.app",
+  messagingSenderId: "618637596084",
+  appId: "1:618637596084:web:42548537e35b92ccaf8ee1",
+  measurementId: "G-QFVWF74P82"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+/* =====================================
+   DATA
+===================================== */
+
+let wallet =
+    JSON.parse(
+        localStorage.getItem("myWallet")
+    ) || {
+
+        cash: 0,
+
+        ewallet: 0
+
+    };
+
+
+let wishlist =
+    JSON.parse(
+        localStorage.getItem("myWishlist")
+    ) || [];
+
+
+let transactions =
+    JSON.parse(
+        localStorage.getItem("myTransactions")
+    ) || [];
+
+
+let currentWallet = "";
+
+let currentAction = "";
+
+
+
+/* =====================================
+   RUPIAH
+===================================== */
+
+function formatRupiah(number) {
+
+    return new Intl.NumberFormat(
+        "id-ID",
+        {
+            style: "currency",
+            currency: "IDR",
+            maximumFractionDigits: 0
+        }
+    ).format(number);
+
+}
+
+
+
+/* =====================================
+   SAVE DATA
+===================================== */
+
+function saveData() {
+
+    localStorage.setItem(
+        "myWallet",
+        JSON.stringify(wallet)
+    );
+
+    localStorage.setItem(
+        "myWishlist",
+        JSON.stringify(wishlist)
+    );
+
+    localStorage.setItem(
+        "myTransactions",
+        JSON.stringify(transactions)
+    );
+
+}
+
+
+
+/* =====================================
+   TOTAL
+===================================== */
+
+function getTotalBalance() {
+
+    return wallet.cash +
+           wallet.ewallet;
+
+}
+
+
+
+/* =====================================
+   UPDATE
+===================================== */
+
+function updateDisplay() {
+
+    document.getElementById(
+        "cashBalance"
+    ).textContent =
+        formatRupiah(wallet.cash);
+
+
+    document.getElementById(
+        "ewalletBalance"
+    ).textContent =
+        formatRupiah(wallet.ewallet);
+
+
+    document.getElementById(
+        "totalBalance"
+    ).textContent =
+        formatRupiah(
+            getTotalBalance()
+        );
+
+
+    renderTransactions();
+
+    renderWishlist();
+
+}
+
+
+
+/* =====================================
+   CHANGE BALANCE
+===================================== */
+
+function changeBalance(
+    type,
+    action
+) {
+
+    currentWallet = type;
+
+    currentAction = action;
+
+
+    document.getElementById(
+        "balanceModalTitle"
+    ).textContent =
+        action === "add"
+        ? "Tambah Saldo"
+        : "Kurangi Saldo";
+
+
+    document.getElementById(
+        "balanceInput"
+    ).value = "";
+
+
+    document.getElementById(
+        "transactionDescription"
+    ).value = "";
+
+
+    document.getElementById(
+        "balanceModal"
+    ).classList.add("active");
+
+}
+
+
+
+/* =====================================
+   SAVE BALANCE
+===================================== */
+
+function saveBalance() {
+
+    const amount =
+        Number(
+            document.getElementById(
+                "balanceInput"
+            ).value
+        );
+
+
+    const description =
+        document.getElementById(
+            "transactionDescription"
+        ).value.trim();
+
+
+    if (!amount || amount <= 0) {
+
+        alert(
+            "Masukkan nominal yang valid."
+        );
+
+        return;
+
+    }
+
+
+    if (!description) {
+
+        alert(
+            "Masukkan keterangan transaksi."
+        );
+
+        return;
+
+    }
+
+
+
+    /* ===============================
+       TAMBAH
+    =============================== */
+
+    if (currentAction === "add") {
+
+        wallet[currentWallet] += amount;
+
+    }
+
+
+    /* ===============================
+       KURANGI
+    =============================== */
+
+    else {
+
+        if (
+            amount >
+            wallet[currentWallet]
+        ) {
+
+            alert(
+                "Saldo tidak mencukupi."
+            );
+
+            return;
+
+        }
+
+
+        wallet[currentWallet] -= amount;
+
+    }
+
+
+
+    /* ===============================
+       TRANSACTION
+    =============================== */
+
+    transactions.unshift({
+
+        id: Date.now(),
+
+        type: currentAction,
+
+        wallet: currentWallet,
+
+        amount: amount,
+
+        description: description,
+
+        date: new Date().toISOString()
+
+    });
+
+
+    saveData();
+
+    updateDisplay();
+
+    closeModal("balanceModal");
+
+}
+
+
+
+/* =====================================
+   RENDER TRANSACTIONS
+===================================== */
+
+function renderTransactions() {
+
+    const container =
+        document.getElementById(
+            "historyContainer"
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (
+        transactions.length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty">
+
+                Belum ada transaksi.
+
+                <br>
+
+                Riwayat penambahan
+                dan pengurangan saldo
+                akan muncul di sini.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+
+    transactions.forEach(
+        transaction => {
+
+            const income =
+                transaction.type === "add";
+
+
+            const walletName =
+                transaction.wallet === "cash"
+                ? "Cash"
+                : "E-Wallet";
+
+
+            const date =
+                new Date(
+                    transaction.date
+                );
+
+
+            const formattedDate =
+                date.toLocaleDateString(
+                    "id-ID",
+                    {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric"
+                    }
+                );
+
+
+            const formattedTime =
+                date.toLocaleTimeString(
+                    "id-ID",
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    }
+                );
+
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "transaction";
+
+
+            div.innerHTML = `
+
+                <div class="
+                    transaction-icon
+                    ${income
+                        ? "income"
+                        : "expense"}
+                ">
+
+                    ${income ? "↓" : "↑"}
+
+                </div>
+
+
+                <div
+                    class="transaction-info">
+
+                    <div
+                        class="transaction-title">
+
+                        ${income
+                            ? "Penambahan Saldo"
+                            : "Pengurangan Saldo"}
+
+                        · ${walletName}
+
+                    </div>
+
+
+                    <div
+                        class="
+                            transaction-description
+                        ">
+
+                        ${escapeHTML(
+                            transaction.description
+                        )}
+
+                    </div>
+
+
+                    <div
+                        class="transaction-date">
+
+                        ${formattedDate}
+                        ·
+                        ${formattedTime}
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="
+                        transaction-amount
+                        ${income
+                            ? "income"
+                            : "expense"}
+                    ">
+
+                    ${income ? "+" : "-"}
+                    ${formatRupiah(
+                        transaction.amount
+                    )}
+
+                </div>
+
+
+                <button
+                    class="delete-transaction"
+                    onclick="
+                        deleteTransaction(
+                            ${transaction.id}
+                        )
+                    "
+                    title="Hapus transaksi">
+
+                    ×
+
+                </button>
+
+            `;
+
+
+            container.appendChild(div);
+
+        }
+    );
+
+}
+
+
+
+/* =====================================
+   DELETE TRANSACTION
+===================================== */
+
+function deleteTransaction(id) {
+
+    const confirmDelete =
+        confirm(
+            "Hapus transaksi ini?"
+        );
+
+
+    if (!confirmDelete) return;
+
+
+    transactions =
+        transactions.filter(
+            transaction =>
+                transaction.id !== id
+        );
+
+
+    saveData();
+
+    updateDisplay();
+
+}
+
+
+
+/* =====================================
+   CLEAR HISTORY
+===================================== */
+
+function clearHistory() {
+
+    if (
+        transactions.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    const confirmDelete =
+        confirm(
+            "Hapus semua riwayat transaksi?"
+        );
+
+
+    if (!confirmDelete) return;
+
+
+    transactions = [];
+
+
+    saveData();
+
+    updateDisplay();
+
+}
+
+
+
+/* =====================================
+   WISHLIST
+===================================== */
+
+function openWishlistModal() {
+
+    document.getElementById(
+        "itemName"
+    ).value = "";
+
+
+    document.getElementById(
+        "itemPrice"
+    ).value = "";
+
+
+    document.getElementById(
+        "wishlistModal"
+    ).classList.add("active");
+
+}
+
+
+
+/* =====================================
+   SAVE WISHLIST
+===================================== */
+
+function saveWishlist() {
+
+    const name =
+        document.getElementById(
+            "itemName"
+        ).value.trim();
+
+
+    const price =
+        Number(
+            document.getElementById(
+                "itemPrice"
+            ).value
+        );
+
+
+    if (!name) {
+
+        alert(
+            "Nama barang belum diisi."
+        );
+
+        return;
+
+    }
+
+
+    if (!price || price <= 0) {
+
+        alert(
+            "Masukkan harga yang valid."
+        );
+
+        return;
+
+    }
+
+
+    wishlist.push({
+
+        id: Date.now(),
+
+        name: name,
+
+        price: price
+
+    });
+
+
+    saveData();
+
+    updateDisplay();
+
+    closeModal(
+        "wishlistModal"
+    );
+
+}
+
+
+
+/* =====================================
+   RENDER WISHLIST
+===================================== */
+
+function renderWishlist() {
+
+    const container =
+        document.getElementById(
+            "wishlistContainer"
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (
+        wishlist.length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty">
+
+                Belum ada Wishlist.
+
+                <br>
+
+                Tambahkan barang
+                yang ingin kamu beli.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    const total =
+        getTotalBalance();
+
+
+    wishlist.forEach(item => {
+
+        const enough =
+            total >= item.price;
+
+
+        let percentage =
+            (
+                total /
+                item.price
+            ) * 100;
+
+
+        if (percentage > 100) {
+
+            percentage = 100;
+
+        }
+
+
+        const card =
+            document.createElement(
+                "div"
+            );
+
+
+        card.className =
+            "wishlist-card";
+
+
+        card.innerHTML = `
+
+            <div class="wishlist-top">
+
+                <div>
+
+                    <div class="item-name">
+
+                        ${escapeHTML(
+                            item.name
+                        )}
+
+                    </div>
+
+
+                    <div class="
+                        item-price
+                        ${
+                            enough
+                            ? "price-enough"
+                            : "price-not-enough"
+                        }
+                    ">
+
+                        ${formatRupiah(
+                            item.price
+                        )}
+
+                    </div>
+
+                </div>
+
+
+                <div class="
+                    status
+                    ${
+                        enough
+                        ? "status-enough"
+                        : "status-not-enough"
+                    }
+                ">
+
+                    ${
+                        enough
+                        ? "SALDO CUKUP"
+                        : "BELUM CUKUP"
+                    }
+
+                </div>
+
+            </div>
+
+
+            <div class="progress-bg">
+
+                <div
+                    class="
+                        progress
+                        ${
+                            enough
+                            ? "complete"
+                            : ""
+                        }
+                    "
+                    style="
+                        width:${percentage}%
+                    "
+                ></div>
+
+            </div>
+
+
+            <div class="item-info">
+
+                <span>
+
+                    ${
+                        enough
+
+                        ? "Bisa dibeli sekarang"
+
+                        : "Kurang " +
+                          formatRupiah(
+                              item.price - total
+                          )
+                    }
+
+                </span>
+
+
+                <span>
+
+                    ${Math.round(
+                        percentage
+                    )}%
+
+                </span>
+
+            </div>
+
+
+            <div class="item-actions">
+
+                <button
+                    class="delete-btn"
+                    onclick="
+                        deleteWishlist(
+                            ${item.id}
+                        )
+                    ">
+
+                    Hapus
+
+                </button>
+
+            </div>
+
+        `;
+
+
+        container.appendChild(card);
+
+    });
+
+}
+
+
+
+/* =====================================
+   DELETE WISHLIST
+===================================== */
+
+function deleteWishlist(id) {
+
+    if (
+        !confirm(
+            "Hapus barang dari Wishlist?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    wishlist =
+        wishlist.filter(
+            item =>
+                item.id !== id
+        );
+
+
+    saveData();
+
+    updateDisplay();
+
+}
+
+
+
+/* =====================================
+   CLOSE MODAL
+===================================== */
+
+function closeModal(id) {
+
+    document.getElementById(
+        id
+    ).classList.remove("active");
+
+}
+
+
+
+/* =====================================
+   ESCAPE HTML
+===================================== */
+
+function escapeHTML(text) {
+
+    return text
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+
+/* =====================================
+   CLICK OUTSIDE MODAL
+===================================== */
+
+document
+.querySelectorAll(".modal")
+.forEach(modal => {
+
+    modal.addEventListener(
+        "click",
+        function(e) {
+
+            if (
+                e.target === modal
+            ) {
+
+                modal.classList.remove(
+                    "active"
+                );
+
+            }
+
+        }
+    );
+
+});
+
+
+
+/* =====================================
+   INITIALIZE
+===================================== */
+
+updateDisplay();
+
+</script>
+</body>
+</html>
