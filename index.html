@@ -564,6 +564,9 @@ body {
 .login-btn:disabled{opacity:.65;cursor:wait}
 .login-error{display:none;background:#fff0f0;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;padding:11px;font-size:12px;margin:12px 0}
 .login-error.show{display:block}
+.setup-toggle{display:block;width:100%;margin-top:15px;border:0;background:transparent;color:#0b5cff;font-size:13px;font-weight:700;cursor:pointer;padding:8px}
+.setup-note{font-size:12px;color:#667085;line-height:1.5;margin:0 0 12px}
+#setupForm .input-group{margin-top:12px}
 .loading{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#0b5cff;background:#f4f6f8;font-weight:700}
 .loading:before{content:"";width:32px;height:32px;border:4px solid #dbe7ff;border-top-color:#0b5cff;border-radius:50%;animation:walletSpin .8s linear infinite}
 @keyframes walletSpin{to{transform:rotate(360deg)}}
@@ -583,19 +586,25 @@ body {
 <section id="loginPage" class="login-page" style="display:none">
   <div class="login-card">
     <div class="login-logo">MyWallet</div>
-    <div class="login-subtitle">Login untuk mengakses dompetmu</div>
-    <form id="loginForm">
+    <div class="login-subtitle">Masukkan PIN 6 digit untuk membuka dompetmu</div>
+    <form id="pinLoginForm">
       <div class="input-group">
-        <label for="loginEmail">Email</label>
-        <input id="loginEmail" type="email" autocomplete="username" placeholder="nama@email.com" required>
-      </div>
-      <div class="input-group">
-        <label for="loginPassword">Password</label>
-        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Masukkan password" required>
+        <label for="loginPin">PIN MyWallet</label>
+        <input id="loginPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="••••••" aria-label="PIN 6 digit" required>
       </div>
       <div id="loginError" class="login-error" role="alert"></div>
-      <button id="loginBtn" class="login-btn" type="submit">Login</button>
+      <button id="loginBtn" class="login-btn" type="submit">Login dengan PIN</button>
     </form>
+    <button id="showSetupBtn" class="setup-toggle" type="button">Aktivasi / ganti PIN (sekali)</button>
+    <form id="setupForm" style="display:none;margin-top:18px">
+      <p class="setup-note">Untuk menghubungkan PIN ke akun Firebase, verifikasi email dan password akun yang sudah digunakan MyWallet. Langkah ini hanya diperlukan saat aktivasi PIN.</p>
+      <div class="input-group"><label for="setupEmail">Email akun Firebase</label><input id="setupEmail" type="email" autocomplete="username" placeholder="nama@email.com" required></div>
+      <div class="input-group"><label for="setupPassword">Password akun Firebase</label><input id="setupPassword" type="password" autocomplete="current-password" placeholder="Password Firebase" required></div>
+      <div class="input-group"><label for="setupPin">Buat PIN baru (6 digit)</label><input id="setupPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="PIN baru" required></div>
+      <div class="input-group"><label for="setupPinConfirm">Ulangi PIN baru</label><input id="setupPinConfirm" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" placeholder="Ulangi PIN" required></div>
+      <button id="setupBtn" class="login-btn" type="submit">Verifikasi & aktifkan PIN</button>
+    </form>
+    <p class="setup-note" style="margin-top:14px">PIN diverifikasi oleh backend. Jangan gunakan PIN bank utama atau PIN yang mudah ditebak.</p>
   </div>
 </section>
 
@@ -977,6 +986,7 @@ let currentUser = null;
 let userRef = null;
 let syncStarted = false;
 let syncRefs = [];
+let isPinSetupInProgress = false;
 
 function showLoginError(message) {
     const box = document.getElementById("loginError");
@@ -990,31 +1000,80 @@ function setPage(page) {
     document.getElementById("appPage").style.display = page === "app" ? "block" : "none";
 }
 
-async function doLogin(event) {
+// Ganti URL ini dengan URL Cloudflare Worker setelah backend dideploy (tanpa /login atau /enroll).
+const PIN_API_URL = "https://fauzanwallet2026.workers.dev";
+
+function clearLoginError() {
+    const box = document.getElementById("loginError");
+    box.textContent = "";
+    box.classList.remove("show");
+}
+
+async function callPinApi(path, body, idToken) {
+    if (!PIN_API_URL.startsWith("https://")) throw new Error("Backend PIN belum dikonfigurasi. Isi PIN_API_URL setelah deploy backend.");
+    const headers = { "Content-Type": "application/json" };
+    if (idToken) headers.Authorization = "Bearer " + idToken;
+    const response = await fetch(PIN_API_URL.replace(/\/$/, "") + "/" + path, {
+        method: "POST", headers, body: JSON.stringify(body)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Permintaan PIN gagal.");
+    return data;
+}
+
+async function doPinLogin(event) {
     event.preventDefault();
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
+    clearLoginError();
+    const pinInput = document.getElementById("loginPin");
     const btn = document.getElementById("loginBtn");
-    const error = document.getElementById("loginError");
-    error.textContent = "";
-    error.classList.remove("show");
-    btn.disabled = true;
-    btn.textContent = "Memproses...";
+    const pin = pinInput.value;
+    if (!/^[0-9]{6}$/.test(pin)) { showLoginError("PIN harus terdiri dari 6 angka."); return; }
+    btn.disabled = true; btn.textContent = "Memverifikasi PIN...";
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        const result = await callPinApi("login", { pin });
+        if (!result.customToken) throw new Error("Backend tidak mengembalikan sesi autentikasi.");
+        await auth.signInWithCustomToken(result.customToken);
+        pinInput.value = "";
     } catch (err) {
-        const messages = {
-            "auth/invalid-email": "Format email tidak valid.",
-            "auth/user-not-found": "Akun tidak ditemukan.",
-            "auth/wrong-password": "Email atau password salah.",
-            "auth/invalid-credential": "Email atau password salah.",
-            "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti.",
-            "auth/network-request-failed": "Koneksi internet bermasalah."
-        };
-        showLoginError(messages[err.code] || ("Login gagal: " + err.message));
+        showLoginError(err.message || "Login PIN gagal.");
     } finally {
-        btn.disabled = false;
-        btn.textContent = "Login";
+        btn.disabled = false; btn.textContent = "Login dengan PIN";
+    }
+}
+
+async function doPinSetup(event) {
+    event.preventDefault();
+    clearLoginError();
+    const email = document.getElementById("setupEmail").value.trim();
+    const password = document.getElementById("setupPassword").value;
+    const pin = document.getElementById("setupPin").value;
+    const confirmPin = document.getElementById("setupPinConfirm").value;
+    const btn = document.getElementById("setupBtn");
+    if (!/^[0-9]{6}$/.test(pin)) { showLoginError("PIN harus tepat 6 angka."); return; }
+    if (pin !== confirmPin) { showLoginError("Konfirmasi PIN tidak sama."); return; }
+    if (/^(\d)\1{5}$/.test(pin) || ["123456","654321","012345","111111","000000"].includes(pin)) {
+        showLoginError("Pilih PIN yang tidak mudah ditebak."); return;
+    }
+    btn.disabled = true; btn.textContent = "Memverifikasi akun...";
+    isPinSetupInProgress = true;
+    try {
+        // Email/password dipakai hanya untuk aktivasi; tidak disimpan di HTML atau database.
+        const credential = await auth.signInWithEmailAndPassword(email, password);
+        const idToken = await credential.user.getIdToken(true);
+        await callPinApi("enroll", { pin }, idToken);
+        await auth.signOut();
+        document.getElementById("setupForm").reset();
+        document.getElementById("setupForm").style.display = "none";
+        document.getElementById("showSetupBtn").textContent = "PIN berhasil diaktifkan — aktivasi / ganti PIN";
+        showLoginError("PIN berhasil diaktifkan. Sekarang login menggunakan PIN 6 digit.");
+        document.getElementById("loginError").classList.add("show");
+    } catch (err) {
+        if (auth.currentUser) { try { await auth.signOut(); } catch (_) {} }
+        showLoginError(err.message || "Aktivasi PIN gagal.");
+    } finally {
+        isPinSetupInProgress = false;
+        document.getElementById("setupPassword").value = "";
+        btn.disabled = false; btn.textContent = "Verifikasi & aktifkan PIN";
     }
 }
 
@@ -1744,7 +1803,15 @@ document
    AUTH & INITIALIZE
 ===================================== */
 
-document.getElementById("loginForm").addEventListener("submit", doLogin);
+document.getElementById("pinLoginForm").addEventListener("submit", doPinLogin);
+document.getElementById("setupForm").addEventListener("submit", doPinSetup);
+document.getElementById("showSetupBtn").addEventListener("click", () => {
+    const form = document.getElementById("setupForm");
+    const opening = form.style.display === "none";
+    form.style.display = opening ? "block" : "none";
+    if (opening) document.getElementById("setupEmail").focus();
+    clearLoginError();
+});
 document.getElementById("profileBtn").addEventListener("click", async () => {
     if (confirm("Logout dari akun ini?")) {
         try { await auth.signOut(); }
@@ -1752,8 +1819,15 @@ document.getElementById("profileBtn").addEventListener("click", async () => {
     }
 });
 
-auth.onAuthStateChanged(user => {
+// No persistence: setiap sesi/perangkat perlu memasukkan PIN lagi.
+// Sesi Firebase hanya hidup di memori tab; custom token tetap dikeluarkan backend.
+auth.setPersistence(firebase.auth.Auth.Persistence.NONE).then(() => auth.onAuthStateChanged(user => {
     stopSync();
+    if (isPinSetupInProgress) {
+        currentUser = null;
+        setPage("login");
+        return;
+    }
     currentUser = user || null;
     if (user) {
         userRef = database.ref("users/" + user.uid);
@@ -1769,9 +1843,13 @@ auth.onAuthStateChanged(user => {
         wallet = { cash: 0, ewallet: 0 };
         wishlist = [];
         transactions = [];
-        document.getElementById("loginPassword").value = "";
+        document.getElementById("loginPin").value = "";
         setPage("login");
     }
+})).catch(err => {
+    console.error("Firebase Auth persistence:", err);
+    showLoginError("Gagal menyiapkan autentikasi Firebase. Muat ulang halaman.");
+    setPage("login");
 });
 
 </script>
