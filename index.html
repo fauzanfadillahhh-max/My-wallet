@@ -552,6 +552,25 @@ body {
     }
 }
 
+
+
+/* LOGIN & LOADING */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px;background:linear-gradient(135deg,#0757d8,#0b5cff 55%,#7aa7ff)}
+.login-card{width:100%;max-width:400px;background:#fff;border-radius:22px;padding:30px;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+.login-logo{text-align:center;font-size:29px;font-weight:800;color:#0b5cff;margin-bottom:8px}
+.login-subtitle{text-align:center;color:#7b8794;font-size:13px;margin-bottom:26px}
+.login-card .input-group input{width:100%;padding:13px;border:1px solid #e7ebef;border-radius:10px;font-size:14px}
+.login-btn{width:100%;border:0;border-radius:10px;padding:13px;background:#0b5cff;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px}
+.login-btn:disabled{opacity:.65;cursor:wait}
+.login-error{display:none;background:#fff0f0;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;padding:11px;font-size:12px;margin:12px 0}
+.login-error.show{display:block}
+.loading{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#0b5cff;background:#f4f6f8;font-weight:700}
+.loading:before{content:"";width:32px;height:32px;border:4px solid #dbe7ff;border-top-color:#0b5cff;border-radius:50%;animation:walletSpin .8s linear infinite}
+@keyframes walletSpin{to{transform:rotate(360deg)}}
+.profile{cursor:pointer;transition:background .2s}
+.profile:hover{background:rgba(255,255,255,.3)}
+#appPage{display:none}
+
 </style>
 </head>
 
@@ -559,6 +578,28 @@ body {
 <body>
 
 
+<div id="loadingPage" class="loading">Memeriksa sesi login...</div>
+
+<section id="loginPage" class="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">MyWallet</div>
+    <div class="login-subtitle">Login untuk mengakses dompetmu</div>
+    <form id="loginForm">
+      <div class="input-group">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" autocomplete="username" placeholder="nama@email.com" required>
+      </div>
+      <div class="input-group">
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Masukkan password" required>
+      </div>
+      <div id="loginError" class="login-error" role="alert"></div>
+      <button id="loginBtn" class="login-btn" type="submit">Login</button>
+    </form>
+  </div>
+</section>
+
+<div id="appPage">
 <!-- =====================================
      HEADER
 ===================================== -->
@@ -571,9 +612,7 @@ body {
             My<span>Wallet</span>
         </div>
 
-        <div class="profile">
-            M
-        </div>
+        <div class="profile" id="profileBtn" title="Klik untuk logout">M</div>
 
     </div>
 
@@ -897,8 +936,11 @@ body {
 
 
 
+</div>
+
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
@@ -922,36 +964,105 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 /* =====================================
-   DATA
+   DATA FIREBASE
 ===================================== */
 
-let wallet =
-    JSON.parse(
-        localStorage.getItem("myWallet")
-    ) || {
-
-        cash: 0,
-
-        ewallet: 0
-
-    };
-
-
-let wishlist =
-    JSON.parse(
-        localStorage.getItem("myWishlist")
-    ) || [];
-
-
-let transactions =
-    JSON.parse(
-        localStorage.getItem("myTransactions")
-    ) || [];
-
-
+let wallet = { cash: 0, ewallet: 0 };
+let wishlist = [];
+let transactions = [];
 let currentWallet = "";
-
 let currentAction = "";
+let auth = firebase.auth();
+let currentUser = null;
+let userRef = null;
+let syncStarted = false;
+let syncRefs = [];
+
+function showLoginError(message) {
+    const box = document.getElementById("loginError");
+    box.textContent = message;
+    box.classList.add("show");
+}
+
+function setPage(page) {
+    document.getElementById("loadingPage").style.display = page === "loading" ? "flex" : "none";
+    document.getElementById("loginPage").style.display = page === "login" ? "flex" : "none";
+    document.getElementById("appPage").style.display = page === "app" ? "block" : "none";
+}
+
+async function doLogin(event) {
+    event.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    const btn = document.getElementById("loginBtn");
+    const error = document.getElementById("loginError");
+    error.textContent = "";
+    error.classList.remove("show");
+    btn.disabled = true;
+    btn.textContent = "Memproses...";
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
+        const messages = {
+            "auth/invalid-email": "Format email tidak valid.",
+            "auth/user-not-found": "Akun tidak ditemukan.",
+            "auth/wrong-password": "Email atau password salah.",
+            "auth/invalid-credential": "Email atau password salah.",
+            "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti.",
+            "auth/network-request-failed": "Koneksi internet bermasalah."
+        };
+        showLoginError(messages[err.code] || ("Login gagal: " + err.message));
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Login";
+    }
+}
+
+function startSync() {
+    if (!userRef || syncStarted) return;
+    syncStarted = true;
+    const walletRef = userRef.child("wallet");
+    const transactionsRef = userRef.child("transactions");
+    const wishlistRef = userRef.child("wishlist");
+    syncRefs = [walletRef, transactionsRef, wishlistRef];
+    walletRef.on("value", snap => {
+        const data = snap.val() || {};
+        wallet = { cash: Number(data.cash) || 0, ewallet: Number(data.ewallet) || 0 };
+        updateDisplay();
+    }, handleDatabaseError);
+    transactionsRef.on("value", snap => {
+        const data = snap.val() || {};
+        transactions = Object.values(data).filter(Boolean).sort((a,b) => Number(b.id || 0) - Number(a.id || 0));
+        renderTransactions();
+    }, handleDatabaseError);
+    wishlistRef.on("value", snap => {
+        const data = snap.val() || {};
+        wishlist = Object.values(data).filter(Boolean).sort((a,b) => Number(a.id || 0) - Number(b.id || 0));
+        renderWishlist();
+    }, handleDatabaseError);
+}
+
+function stopSync() {
+    syncRefs.forEach(ref => ref.off());
+    syncRefs = [];
+    userRef = null;
+    syncStarted = false;
+}
+
+function handleDatabaseError(error) {
+    console.error("Firebase Database:", error);
+    alert("Gagal mengakses database. Periksa koneksi dan Firebase Rules: " + error.message);
+}
+
+function databaseReady() {
+    if (!currentUser || !userRef) {
+        alert("Sesi login belum siap. Silakan login kembali.");
+        return false;
+    }
+    return true;
+}
+
+
 
 
 
@@ -973,29 +1084,6 @@ function formatRupiah(number) {
 }
 
 
-
-/* =====================================
-   SAVE DATA
-===================================== */
-
-function saveData() {
-
-    localStorage.setItem(
-        "myWallet",
-        JSON.stringify(wallet)
-    );
-
-    localStorage.setItem(
-        "myWishlist",
-        JSON.stringify(wishlist)
-    );
-
-    localStorage.setItem(
-        "myTransactions",
-        JSON.stringify(transactions)
-    );
-
-}
 
 
 
@@ -1090,116 +1178,30 @@ function changeBalance(
    SAVE BALANCE
 ===================================== */
 
-function saveBalance() {
-
-    const amount =
-        Number(
-            document.getElementById(
-                "balanceInput"
-            ).value
-        );
-
-
-    const description =
-        document.getElementById(
-            "transactionDescription"
-        ).value.trim();
-
-
-    if (!amount || amount <= 0) {
-
-        alert(
-            "Masukkan nominal yang valid."
-        );
-
-        return;
-
+async function saveBalance() {
+    if (!databaseReady()) return;
+    const amount = Number(document.getElementById("balanceInput").value);
+    const description = document.getElementById("transactionDescription").value.trim();
+    if (!amount || amount <= 0) { alert("Masukkan nominal yang valid."); return; }
+    if (!description) { alert("Masukkan keterangan transaksi."); return; }
+    const currentAmount = Number(wallet[currentWallet]) || 0;
+    if (currentAction === "minus" && amount > currentAmount) { alert("Saldo tidak mencukupi."); return; }
+    const newBalance = currentAction === "add" ? currentAmount + amount : currentAmount - amount;
+    const id = Date.now();
+    const updates = {};
+    updates["wallet/" + currentWallet] = newBalance;
+    updates["transactions/" + id] = {
+        id, type: currentAction, wallet: currentWallet,
+        amount, description, date: new Date().toISOString()
+    };
+    try {
+        await userRef.update(updates);
+        closeModal("balanceModal");
+    } catch (err) {
+        alert("Transaksi gagal disimpan ke Firebase: " + err.message);
     }
-
-
-    if (!description) {
-
-        alert(
-            "Masukkan keterangan transaksi."
-        );
-
-        return;
-
-    }
-
-
-
-    /* ===============================
-       TAMBAH
-    =============================== */
-
-    if (currentAction === "add") {
-
-        wallet[currentWallet] += amount;
-
-    }
-
-
-    /* ===============================
-       KURANGI
-    =============================== */
-
-    else {
-
-        if (
-            amount >
-            wallet[currentWallet]
-        ) {
-
-            alert(
-                "Saldo tidak mencukupi."
-            );
-
-            return;
-
-        }
-
-
-        wallet[currentWallet] -= amount;
-
-    }
-
-
-
-    /* ===============================
-       TRANSACTION
-    =============================== */
-
-    transactions.unshift({
-
-        id: Date.now(),
-
-        type: currentAction,
-
-        wallet: currentWallet,
-
-        amount: amount,
-
-        description: description,
-
-        date: new Date().toISOString()
-
-    });
-
-
-    saveData();
-
-    updateDisplay();
-
-    closeModal("balanceModal");
-
 }
 
-
-
-/* =====================================
-   RENDER TRANSACTIONS
-===================================== */
 
 function renderTransactions() {
 
@@ -1386,28 +1388,11 @@ function renderTransactions() {
    DELETE TRANSACTION
 ===================================== */
 
-function deleteTransaction(id) {
-
-    const confirmDelete =
-        confirm(
-            "Hapus transaksi ini?"
-        );
-
-
-    if (!confirmDelete) return;
-
-
-    transactions =
-        transactions.filter(
-            transaction =>
-                transaction.id !== id
-        );
-
-
-    saveData();
-
-    updateDisplay();
-
+async function deleteTransaction(id) {
+    if (!databaseReady()) return;
+    if (!confirm("Hapus transaksi ini?")) return;
+    try { await userRef.child("transactions/" + id).remove(); }
+    catch (err) { alert("Gagal menghapus transaksi: " + err.message); }
 }
 
 
@@ -1416,33 +1401,12 @@ function deleteTransaction(id) {
    CLEAR HISTORY
 ===================================== */
 
-function clearHistory() {
-
-    if (
-        transactions.length === 0
-    ) {
-
-        return;
-
-    }
-
-
-    const confirmDelete =
-        confirm(
-            "Hapus semua riwayat transaksi?"
-        );
-
-
-    if (!confirmDelete) return;
-
-
-    transactions = [];
-
-
-    saveData();
-
-    updateDisplay();
-
+async function clearHistory() {
+    if (!databaseReady()) return;
+    if (transactions.length === 0) return;
+    if (!confirm("Hapus semua riwayat transaksi?")) return;
+    try { await userRef.child("transactions").remove(); }
+    catch (err) { alert("Gagal menghapus riwayat: " + err.message); }
 }
 
 
@@ -1475,70 +1439,21 @@ function openWishlistModal() {
    SAVE WISHLIST
 ===================================== */
 
-function saveWishlist() {
-
-    const name =
-        document.getElementById(
-            "itemName"
-        ).value.trim();
-
-
-    const price =
-        Number(
-            document.getElementById(
-                "itemPrice"
-            ).value
-        );
-
-
-    if (!name) {
-
-        alert(
-            "Nama barang belum diisi."
-        );
-
-        return;
-
+async function saveWishlist() {
+    if (!databaseReady()) return;
+    const name = document.getElementById("itemName").value.trim();
+    const price = Number(document.getElementById("itemPrice").value);
+    if (!name) { alert("Nama barang belum diisi."); return; }
+    if (!price || price <= 0) { alert("Masukkan harga yang valid."); return; }
+    const id = Date.now();
+    try {
+        await userRef.child("wishlist/" + id).set({ id, name, price });
+        closeModal("wishlistModal");
+    } catch (err) {
+        alert("Wishlist gagal disimpan ke Firebase: " + err.message);
     }
-
-
-    if (!price || price <= 0) {
-
-        alert(
-            "Masukkan harga yang valid."
-        );
-
-        return;
-
-    }
-
-
-    wishlist.push({
-
-        id: Date.now(),
-
-        name: name,
-
-        price: price
-
-    });
-
-
-    saveData();
-
-    updateDisplay();
-
-    closeModal(
-        "wishlistModal"
-    );
-
 }
 
-
-
-/* =====================================
-   RENDER WISHLIST
-===================================== */
 
 function renderWishlist() {
 
@@ -1741,30 +1656,11 @@ function renderWishlist() {
    DELETE WISHLIST
 ===================================== */
 
-function deleteWishlist(id) {
-
-    if (
-        !confirm(
-            "Hapus barang dari Wishlist?"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    wishlist =
-        wishlist.filter(
-            item =>
-                item.id !== id
-        );
-
-
-    saveData();
-
-    updateDisplay();
-
+async function deleteWishlist(id) {
+    if (!databaseReady()) return;
+    if (!confirm("Hapus barang dari Wishlist?")) return;
+    try { await userRef.child("wishlist/" + id).remove(); }
+    catch (err) { alert("Gagal menghapus wishlist: " + err.message); }
 }
 
 
@@ -1845,11 +1741,40 @@ document
 
 
 /* =====================================
-   INITIALIZE
+   AUTH & INITIALIZE
 ===================================== */
 
-updateDisplay();
+document.getElementById("loginForm").addEventListener("submit", doLogin);
+document.getElementById("profileBtn").addEventListener("click", async () => {
+    if (confirm("Logout dari akun ini?")) {
+        try { await auth.signOut(); }
+        catch (err) { alert("Logout gagal: " + err.message); }
+    }
+});
+
+auth.onAuthStateChanged(user => {
+    stopSync();
+    currentUser = user || null;
+    if (user) {
+        userRef = database.ref("users/" + user.uid);
+        const email = user.email || "MyWallet";
+        document.getElementById("profileBtn").textContent = email.charAt(0).toUpperCase();
+        setPage("app");
+        wallet = { cash: 0, ewallet: 0 };
+        wishlist = [];
+        transactions = [];
+        updateDisplay();
+        startSync();
+    } else {
+        wallet = { cash: 0, ewallet: 0 };
+        wishlist = [];
+        transactions = [];
+        document.getElementById("loginPassword").value = "";
+        setPage("login");
+    }
+});
 
 </script>
+
 </body>
 </html>
